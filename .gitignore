@@ -1,0 +1,46 @@
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Project artifacts
+models/*.pkl
+data/raw/*.pkl
+data/raw/yahoo_test_cache_*
+outputs/*.png
+
+# Optional: uncomment to ignore all generated data/processed
+# data/processed/
+
+# Environment and secrets
+.env
+.env.local
+*.key
+
+# IDE and OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Logs and temp
+*.log
+*.tmp
+.cache/
