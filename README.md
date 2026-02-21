@@ -188,30 +188,6 @@ The pipeline produces the following visualizations (saved under `outputs/`). To 
 | **Partial dependence (PDP)** | Effect of each macro variable on the predicted return (per regime); reflects monotonicity constraints. | `{asset}_pdp_{feature}.png` |
 | **Stability** | Sensitivity of predictions to small perturbations in a feature (bounded gradient). | `{asset}_stability_{feature}.png` |
 
-### Regime timeline
-
-Regime labels (K=3) over the training period, with optional price series below.
-
-![Regime timeline](docs/plots/gold_regime_timeline.png)
-
-### Actual vs predicted (Yahoo out-of-sample)
-
-Actual vs predicted weekly log-returns on frozen Yahoo data (2020–present), with GAM and shock components and prediction error.
-
-![Actual vs predicted](docs/plots/yahoo_gold_actual_vs_predicted.png)
-
-### Shock magnitude
-
-Fitted Gaussian-kernel shock component \(u_t\) over time; vertical lines mark configured event centers.
-
-![Shock magnitude](docs/plots/gold_shock_magnitude.png)
-
-### Partial dependence (example: real rate)
-
-Effect of the real interest rate on predicted return; one curve per regime, with monotonicity enforced where specified.
-
-![Partial dependence — real rate](docs/plots/gold_pdp_real_rate.png)
-
 ---
 
 ## Reproducibility
