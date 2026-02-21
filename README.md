@@ -7,7 +7,7 @@ A scientific machine learning system for modeling weekly log-returns of **Gold**
 - Monotonicity constraints on macro sensitivities
 - Bounded gradient sensitivity
 - Exogenous shock amplitudes are L1-regularized
-- Training data is strictly local CSV; Yahoo Finance is test-only
+- Training data is strictly local CSV (gold/oil from Kaggle); Yahoo Finance is test-only
 
 ---
 
@@ -19,7 +19,7 @@ End-to-end flow: **Data → Preprocess → Regime (HMM) → GAM + Shocks → Eva
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                           TRAIN PIPELINE (main.py --mode train)                  │
 ├─────────────────────────────────────────────────────────────────────────────────┤
-│  1. Load data        → Local CSVs (gold/oil), FRED + yfinance macro             │
+│  1. Load data        → Local CSVs from Kaggle (gold/oil), FRED + yfinance macro   │
 │  2. Align & preprocess → Weekly alignment, rolling z-score, chronological split │
 │  3. Fit HMM          → K=3 regimes on macro state X_t                           │
 │  4. Fit GAMs         → One constrained LinearGAM per regime                      │
@@ -46,7 +46,7 @@ End-to-end flow: **Data → Preprocess → Regime (HMM) → GAM + Shocks → Eva
 
 | Stage | Module | What it does |
 |-------|--------|--------------|
-| Load prices | `data_loader.load_gold` / `load_oil` | Read local CSV, compute weekly `log_return` |
+| Load prices | `data_loader.load_gold` / `load_oil` | Read local CSV from Kaggle (gold/oil), compute weekly `log_return` |
 | Load macro | `data_loader.load_macro` | FRED (real_rate, inflation_exp) + yfinance (DXY, VIX, liquidity, demand_proxy) |
 | Align | `preprocessing.align_weekly` | Merge to Friday weekly index, forward-fill macro |
 | Normalize | `preprocessing.rolling_zscore` | 104-week rolling z-score (no lookahead) |
@@ -72,7 +72,7 @@ End-to-end flow: **Data → Preprocess → Regime (HMM) → GAM + Shocks → Eva
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Train (fits on local CSVs, fetches macro from FRED/yfinance)
+# 3. Train (uses Kaggle gold/oil CSVs + FRED/yfinance macro)
 python main.py --mode train --asset both
 
 # 4. Out-of-sample test (frozen Yahoo Finance data, 2020–present)
@@ -105,8 +105,10 @@ y_t = f_{r_t}(X_t)  +  u_t  +  ε_t
 
 ```
 SciML Project/
+├── gold/             ← Kaggle: XAU weekly data (XAU_1w_data.csv)
+├── Oil/              ← Kaggle: Brent oil prices (BrentOilPrices.csv)
 ├── data/
-│   ├── raw/          ← local CSVs + macro_cache.pkl + Yahoo cache
+│   ├── raw/          ← macro_cache.pkl + Yahoo cache
 │   └── processed/    ← yahoo_test_results.csv
 ├── src/
 │   ├── utils.py
@@ -130,7 +132,20 @@ SciML Project/
 
 ---
 
-## Macro Data Sources
+## Data Sources
+
+### Training data (price series) — Kaggle
+
+Gold and Brent Oil price data used for training are **downloaded from Kaggle**. Place the CSV files in the paths expected by the config:
+
+| Asset | Config path | Description |
+|-------|-------------|-------------|
+| Gold | `gold/XAU_1w_data.csv` | Weekly gold (XAU) price series |
+| Oil | `Oil/BrentOilPrices.csv` | Brent oil prices (daily; code resamples to weekly) |
+
+Download the datasets from Kaggle and extract them into the `gold/` and `Oil/` folders in the project root. Out-of-sample evaluation uses Yahoo Finance (see Test pipeline); training uses only these local Kaggle CSVs.
+
+### Macro data — FRED & yfinance
 
 | Variable | Source | Series |
 |----------|--------|--------|
@@ -158,6 +173,44 @@ SciML Project/
 - `data/processed/yahoo_test_results.csv`
 - `data/raw/yahoo_test_cache_{asset}.pkl`
 - `outputs/yahoo_{asset}_actual_vs_predicted.png`
+
+---
+
+## Key plots
+
+The pipeline produces the following visualizations (saved under `outputs/`). To display them in the README on GitHub, copy the desired PNGs into `docs/plots/` and commit.
+
+| Plot | Description | Output file |
+|------|-------------|-------------|
+| **Regime timeline** | HMM regime assignment over time; optional price overlay. | `{asset}_regime_timeline.png` |
+| **Actual vs predicted** | Out-of-sample Yahoo: actual vs predicted log-returns, GAM and shock components, prediction error. | `yahoo_{asset}_actual_vs_predicted.png` |
+| **Shock magnitude** | Fitted exogenous shock \(u_t\) over time with event centers (e.g. 2008 crisis, COVID, 2022). | `{asset}_shock_magnitude.png` |
+| **Partial dependence (PDP)** | Effect of each macro variable on the predicted return (per regime); reflects monotonicity constraints. | `{asset}_pdp_{feature}.png` |
+| **Stability** | Sensitivity of predictions to small perturbations in a feature (bounded gradient). | `{asset}_stability_{feature}.png` |
+
+### Regime timeline
+
+Regime labels (K=3) over the training period, with optional price series below.
+
+![Regime timeline](docs/plots/gold_regime_timeline.png)
+
+### Actual vs predicted (Yahoo out-of-sample)
+
+Actual vs predicted weekly log-returns on frozen Yahoo data (2020–present), with GAM and shock components and prediction error.
+
+![Actual vs predicted](docs/plots/yahoo_gold_actual_vs_predicted.png)
+
+### Shock magnitude
+
+Fitted Gaussian-kernel shock component \(u_t\) over time; vertical lines mark configured event centers.
+
+![Shock magnitude](docs/plots/gold_shock_magnitude.png)
+
+### Partial dependence (example: real rate)
+
+Effect of the real interest rate on predicted return; one curve per regime, with monotonicity enforced where specified.
+
+![Partial dependence — real rate](docs/plots/gold_pdp_real_rate.png)
 
 ---
 
