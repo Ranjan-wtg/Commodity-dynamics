@@ -1,0 +1,107 @@
+seed: 42
+
+# ── Data paths ──────────────────────────────────────────────────────────────
+data:
+  gold_path: "gold/XAU_1w_data.csv"
+  oil_path:  "Oil/BrentOilPrices.csv"
+  yahoo_cache: "data/raw/yahoo_test_cache.pkl"
+  macro_cache: "data/raw/macro_cache.pkl"
+  results_path: "data/processed/yahoo_test_results.csv"
+
+# ── Train / Val / Test splits ───────────────────────────────────────────────
+splits:
+  train_start: "2000-01-01"
+  train_end:   "2016-12-31"
+  val_start:   "2017-01-01"
+  val_end:     "2019-12-31"
+
+# ── Macro data sources (FRED series IDs + yfinance tickers) ────────────────
+macro:
+  # FRED series
+  real_rate: "DFII10"           # 10-Year TIPS real yield (%)
+  inflation_exp: "T10YIE"       # 10-Year breakeven inflation rate
+  # yfinance tickers (weekly close)
+  DXY: "DX-Y.NYB"              # US Dollar Index
+  VIX: "^VIX"                  # CBOE VIX
+  liquidity_proxy: "^TNX"      # 10-Year Treasury yield (inverted ≈ liquidity)
+  demand_proxy: "USO"          # Oil demand proxy ETF (oil only)
+  fallback_demand_proxy: "CL=F"
+
+# ── Yahoo Finance tickers for out-of-sample testing ─────────────────────────
+yahoo:
+  gold_ticker: "GC=F"
+  gold_fallback: "GLD"
+  oil_ticker: "CL=F"
+  oil_fallback: "USO"
+  start_date: "2020-01-01"
+  interval: "1wk"
+
+# ── HMM regime model ─────────────────────────────────────────────────────────
+hmm:
+  n_components: 3
+  covariance_type: "full"
+  n_iter: 200
+  min_diagonal: 0.85           # Persistence constraint
+
+# ── GAM model ────────────────────────────────────────────────────────────────
+gam:
+  n_splines: 10
+  lam: 0.6                     # Smoothing penalty
+  max_iter: 200
+
+# ── Monotonicity constraints ─────────────────────────────────────────────────
+# direction: -1 = non-increasing, +1 = non-decreasing
+constraints:
+  gold:
+    tightening_regime:          # regime index that corresponds to tightening
+      real_rate: -1             # ∂y/∂real_rate ≤ 0 in tightening regime
+    all_regimes:
+      DXY: -1                   # ∂y/∂DXY ≤ 0
+  oil:
+    growth_regime:              # regime index that corresponds to growth
+      demand_proxy: 1           # ∂y/∂demand_proxy ≥ 0
+
+# Bounded sensitivity: ||∂f/∂X||_2 ≤ M
+gradient_bound: 2.0
+
+# ── Shock model ──────────────────────────────────────────────────────────────
+shock:
+  events:
+    financial_crisis:
+      center: "2008-10-01"
+      A_init: -0.15
+      tau_init: 8.0
+    covid:
+      center: "2020-03-01"
+      A_init: -0.20
+      tau_init: 6.0
+    geopolitical_2022:
+      center: "2022-03-01"
+      A_init: 0.10
+      tau_init: 5.0
+  tau_min: 1.0
+  tau_max: 52.0
+  crisis_dominance_gamma: 0.5   # |u_t| >= γ * |f_r(X_t)| in crisis regime
+
+# ── Loss function weights ────────────────────────────────────────────────────
+loss:
+  huber_delta: 1.0
+  lambda_monotonic: 0.5
+  lambda_stability: 0.3
+  lambda_shock: 0.2
+  lambda_regime: 0.1
+  stability_epsilon_std: 0.01
+  stability_n_samples: 10
+
+# ── Alternating optimization ─────────────────────────────────────────────────
+training:
+  n_alternating_iter: 5
+
+# ── Output paths ─────────────────────────────────────────────────────────────
+outputs:
+  models_dir: "models"
+  plots_dir:  "outputs"
+
+# ── Rolling normalization window ─────────────────────────────────────────────
+preprocessing:
+  rolling_window: 104           # 104 weeks = 2 years
